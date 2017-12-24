@@ -6,8 +6,8 @@
 #include <Pushbutton.h>
 
 #define LightThreshold 1000
-#define CentralAllignDur 100
-#define InstructionDuration 4000
+#define CentralAllignDur 200
+#define InstructionDuration 2000
 
 ZumoBuzzer buzzer;
 //ZumoReflectanceSensorArray reflectanceSensors;
