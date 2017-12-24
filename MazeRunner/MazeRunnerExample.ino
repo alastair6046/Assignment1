@@ -7,7 +7,7 @@
 
 #define LightThreshold 500
 #define CentralAllignDur 200
-#define InstructionDuration 2000
+#define InstructionDuration 200000000
 #define TurnDuration 500
 
 ZumoBuzzer buzzer;
@@ -140,6 +140,9 @@ void Halt()
   LeftMotSpeed =0;
   RightMotSpeed = 0;
   MoveZumo=false;
+  Serial.println("Robot Stopped");
+  delay(300);
+  Serial.println("Please provide new instruction");
 }
 
 int CheckForEndOfCorridor()
@@ -160,9 +163,9 @@ int CheckForEndOfCorridor()
 
 void EndOfCorridor()
 {
-     Serial.println("Wall encountered! Stopping movement");   
+     Serial.println("End of Corridor encountered! Stopping movement");   
      motors.setSpeeds(-MAX_SPEED,-MAX_SPEED);
-     delay(400);
+     delay(150);
      Halt();
 }
 
