@@ -5,9 +5,10 @@
 #include <ZumoBuzzer.h>
 #include <Pushbutton.h>
 
-#define LightThreshold 1000
+#define LightThreshold 500
 #define CentralAllignDur 200
 #define InstructionDuration 2000
+#define TurnDuration 500
 
 ZumoBuzzer buzzer;
 //ZumoReflectanceSensorArray reflectanceSensors;
@@ -27,6 +28,7 @@ bool MoveZumo =false;
 float InstructionEnd=0;
 bool ZumoMoving =false;
 int NumFrontSensorsTrigged =0;
+int LightAdjustments[]= {0,-100,-100,-100,-100,0};
 
 void setup() {
   // put your setup code here, to run once:
@@ -56,16 +58,16 @@ void loop() {
                InstructionEnd = millis()+InstructionDuration;
             break;
             case 'a': case 'A': 
-               LeftMotSpeed =0;
+               LeftMotSpeed =-MAX_SPEED;
                RightMotSpeed = MAX_SPEED;
                MoveZumo = true;
-               InstructionEnd = millis()+InstructionDuration;
+               InstructionEnd = millis()+TurnDuration;
             break;
             case 'd': case 'D': 
                LeftMotSpeed =MAX_SPEED;
-               RightMotSpeed = 0;
+               RightMotSpeed =-MAX_SPEED;
                MoveZumo = true;
-               InstructionEnd = millis()+InstructionDuration;
+               InstructionEnd = millis()+TurnDuration;
              break;
              case 'q': case 'Q': 
               Halt();
@@ -78,18 +80,17 @@ void loop() {
       Serial.println("Zumo Moving Completed");
     }
     //front collission
-    bool ReachedEnd;
+    int TriggeredSensors;
     //side collissions
     //left
     if (sensor_values[0]>LightThreshold)
     {
       int TimeCapt = millis();
-      motors.setSpeeds(0,MAX_SPEED);
-      delay(CentralAllignDur);
+      delay(50);  //wait 100ms for more sensors to move onto wall
       motors.setSpeeds(0,0);
-      delay(300);
-      ReachedEnd = CheckForEndOfCorridor();  
-      if (ReachedEnd)
+      TriggeredSensors = CheckForEndOfCorridor();  
+      Serial.println(TriggeredSensors);
+      if (TriggeredSensors>=4)
       {
             EndOfCorridor();
       }
@@ -99,7 +100,8 @@ void loop() {
         motors.setSpeeds(-MAX_SPEED,-MAX_SPEED);
         delay(300);
         motors.setSpeeds(MAX_SPEED,0);
-        delay(500);
+        int Duration = TriggeredSensors*2;
+        delay(200*Duration);
       }
       TimeCapt = millis()-TimeCapt;
       InstructionEnd+=TimeCapt;
@@ -108,12 +110,12 @@ void loop() {
     else if (sensor_values[5]>LightThreshold)
     {
       int TimeCapt = millis();
-      motors.setSpeeds(MAX_SPEED,0);
-      delay(CentralAllignDur);
+      delay(50);
       motors.setSpeeds(0,0);
       delay(300);
-      ReachedEnd=CheckForEndOfCorridor();
-      if (ReachedEnd)
+      TriggeredSensors=CheckForEndOfCorridor();
+      Serial.println(TriggeredSensors);
+      if (TriggeredSensors>=4)
       {
         EndOfCorridor();
       }
@@ -123,20 +125,13 @@ void loop() {
       motors.setSpeeds(-MAX_SPEED,-MAX_SPEED);
       delay(300);
       motors.setSpeeds(0,MAX_SPEED);
-      delay(500);
+      int Duration = TriggeredSensors*2;
+      delay(200*Duration);
       }
       TimeCapt = millis()-TimeCapt;
       InstructionEnd+=TimeCapt;
     }
     NumFrontSensorsTrigged =0;
-   
-    /*for (int s =0; s<NUM_SENSORS; s++)
-    {
-    Serial.println(sensor_values[s]);
-    delay(500);
-    }
-    Serial.println("Reading Complete");
-     delay(3000); */
     motors.setSpeeds(LeftMotSpeed, RightMotSpeed);
 }
 
@@ -147,23 +142,20 @@ void Halt()
   MoveZumo=false;
 }
 
-bool CheckForEndOfCorridor()
+int CheckForEndOfCorridor()
 {
-  
+  sensors.read(sensor_values); 
+  int SensorsTriggered =0;
    for (int s =0; s<NUM_SENSORS; s++)
     {
       Serial.println(sensor_values[s]);
-      if (sensor_values[s]>LightThreshold)
+      if (sensor_values[s]>LightThreshold+LightAdjustments[s])
       {
-        NumFrontSensorsTrigged++;
+        SensorsTriggered++;
       }
     }
     Serial.println("Readings Complete");
-    if (NumFrontSensorsTrigged >=2)
-    { 
-     return true; 
-    }
-    return false;
+    return SensorsTriggered;
 }
 
 void EndOfCorridor()
