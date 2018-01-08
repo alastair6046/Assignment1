@@ -29,15 +29,27 @@ float InstructionEnd=0;
 bool ZumoMoving =false;
 int NumFrontSensorsTrigged =0;
 int LightAdjustments[]= {0,-100,-100,-100,-100,0};
+unsigned int SensorLightThresholds[NUM_SENSORS];
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   Serial.println("Please Press Button on Zumo");
   button.waitForButton();
+  Serial.println("Please move the front of the zuomo on top of the wall then press the button again");
+  button.waitForButton();
+  sensors.read(SensorLightThresholds);
+  for (int i =0; i<6; i++)
+  {
+    Serial.println("Reading");
+    Serial.println(SensorLightThresholds[i]);
+    SensorLightThresholds[i]= SensorLightThresholds[i] *0.85;
+    Serial.println(SensorLightThresholds[i]);
+  }
+  Serial.println("Sensor Reading Complete.  Press button once more to begin");
+  button.waitForButton();  
   Serial.println("Button press acknowledged");
   delay(500);
-
 }
 
 void loop() {
@@ -45,32 +57,32 @@ void loop() {
     //Serial.println("Please Provide a Direction");
     char direction = (char) Serial.read();
     switch(direction){
-            case 'w': case 'W': 
+            case 'w': case 'W': //forwards
                LeftMotSpeed =MAX_SPEED;
                RightMotSpeed = MAX_SPEED;
                MoveZumo = true;
                InstructionEnd = millis()+InstructionDuration;
             break;
-            case 's': case 'S': 
-               LeftMotSpeed =-MAX_SPEED;
-               RightMotSpeed =- MAX_SPEED;
-               MoveZumo = true;
-               InstructionEnd = millis()+InstructionDuration;
+            case 's': case 'S': //stop
+               Halt();
             break;
-            case 'a': case 'A': 
+            case 'a': case 'A': //rotate left
                LeftMotSpeed =-MAX_SPEED;
                RightMotSpeed = MAX_SPEED;
                MoveZumo = true;
                InstructionEnd = millis()+TurnDuration;
             break;
-            case 'd': case 'D': 
+            case 'd': case 'D': //rotate right
                LeftMotSpeed =MAX_SPEED;
                RightMotSpeed =-MAX_SPEED;
                MoveZumo = true;
                InstructionEnd = millis()+TurnDuration;
              break;
-             case 'q': case 'Q': 
-              Halt();
+             case 'q': case 'Q': //room on left
+             break;
+             case 'e': case 'E': //room on right
+             break;
+              
 
     }
     sensors.read(sensor_values); 
@@ -83,7 +95,7 @@ void loop() {
     int TriggeredSensors;
     //side collissions
     //left
-    if (sensor_values[0]>LightThreshold)
+    if (sensor_values[0]>SensorLightThresholds[0])
     {
       int TimeCapt = millis();
       delay(50);  //wait 100ms for more sensors to move onto wall
@@ -107,7 +119,7 @@ void loop() {
       InstructionEnd+=TimeCapt;
     }
     //right
-    else if (sensor_values[5]>LightThreshold)
+    else if (sensor_values[5]>SensorLightThresholds[5])
     {
       int TimeCapt = millis();
       delay(50);
@@ -152,7 +164,7 @@ int CheckForEndOfCorridor()
    for (int s =0; s<NUM_SENSORS; s++)
     {
       Serial.println(sensor_values[s]);
-      if (sensor_values[s]>LightThreshold+LightAdjustments[s])
+      if (sensor_values[s]>SensorLightThresholds[s])
       {
         SensorsTriggered++;
       }
