@@ -105,7 +105,7 @@ void loop() {
       break;
     case 'e': case 'E': //room on right
       Serial.println("Room on right registered");
-      RoomExplore('a');
+      RoomExplore('r');
       break;
 
 
@@ -190,7 +190,7 @@ int CheckForEndOfCorridor()
       SensorsTriggered++; //Increment # of sensors triggered
     }
   }
-  button.waitForButton();
+//  button.waitForButton();  //debug freeze for wall colliding testing
   Serial.println("Readings Complete"); //debug that reading is complete
   return SensorsTriggered; //return the number of sensors that have been triggered
 }
@@ -203,10 +203,11 @@ void EndOfCorridor()
   Halt(); //Stop all movement
 }
 
-void RoomExplore(char direction)  //0 = left & 1 = right
+void RoomExplore(char direction)  
 {
   Serial.println("Room Exploring started");
   TurnZumo(direction, 90);
+  delay(200); //delay to allow US sensor to work
   Serial.print(sonar.ping_cm());
 }
 
@@ -222,6 +223,22 @@ void CalibrateCompass()
 
   motors.setSpeeds(TurnSpeed, -TurnSpeed);
   for (index = 0; index < CALIBRATION_SAMPLES; index ++)
+  {
+    // Take a reading of the magnetic vector and store it in compass.m
+    compass.read();
+
+    running_min.x = min(running_min.x, compass.m.x);
+    running_min.y = min(running_min.y, compass.m.y);
+
+    running_max.x = max(running_max.x, compass.m.x);
+    running_max.y = max(running_max.y, compass.m.y);
+
+    Serial.println(index);
+
+    delay(50);
+  }
+    motors.setSpeeds(-TurnSpeed,TurnSpeed);
+    for (index = 0; index < CALIBRATION_SAMPLES; index ++)
   {
     // Take a reading of the magnetic vector and store it in compass.m
     compass.read();
