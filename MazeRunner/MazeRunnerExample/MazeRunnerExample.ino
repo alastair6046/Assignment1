@@ -22,19 +22,22 @@
 #define TriggerPin 6
 #define EchoPin 2
 #define MaxDistance 200
+#define NUM_SENSORS 6  // theres 6 sensors on the robot
+
+#define ObjectDetectionRange 30
+#define USSamples 15
+
 NewPing sonar(TriggerPin, EchoPin, MaxDistance); //set up the UltraSonic sensor
-
-
 ZumoBuzzer buzzer;
 //ZumoReflectanceSensorArray reflectanceSensors;
 ZumoMotors motors;
 Pushbutton button(ZUMO_BUTTON);
 LSM303 compass;
+ZumoReflectanceSensorArray sensors(QTR_NO_EMITTER_PIN);
 
-#define NUM_SENSORS 6  // theres 6 sensors on the robot
 unsigned int sensor_values[NUM_SENSORS]; //array to store the values of the light sensors
 unsigned int SensorLightThresholds[NUM_SENSORS]; //array to store the treshold value of the light sensors.  Set in Setup
-ZumoReflectanceSensorArray sensors(QTR_NO_EMITTER_PIN);
+
 
 // This is the maximum speed the motors will be allowed to turn.
 // (400 lets the motors go at top speed; decrease to impose a speed limit)
@@ -126,7 +129,7 @@ void loop() {
     motors.setSpeeds(0, 0); //stop
     TriggeredSensors = CheckForEndOfCorridor();  //check how many sensors have been triggered.
     Serial.println(TriggeredSensors);  //debug to report how many sensors have triggered
-    if (TriggeredSensors >= 4) //if 4 or more sensors have triggered it means the end of the corridor has been reached
+    if (TriggeredSensors >= 3) //if 3 or more sensors have triggered it means the end of the corridor has been reached
     {
       EndOfCorridor();  //commence end of corridor instructions
     }
@@ -149,7 +152,7 @@ void loop() {
     motors.setSpeeds(0, 0); //stop
     TriggeredSensors = CheckForEndOfCorridor(); //check how many sensors have been triggered
     Serial.println(TriggeredSensors); //debug to report how many sensors have been triggered
-    if (TriggeredSensors >= 4) //if 4 or more sensors have triggered it means the end of the corridor has been reached
+    if (TriggeredSensors >= 3) //if 3 or more sensors have triggered it means the end of the corridor has been reached
     {
       EndOfCorridor(); //commence end of corridor instructions
     }
@@ -170,6 +173,7 @@ void loop() {
 
 void Halt()
 {
+  motors.setSpeeds(0,0);
   LeftMotSpeed = 0; //stop left motor
   RightMotSpeed = 0; //stop right motor
   MoveZumo = false; //zumo no longer moving
@@ -190,7 +194,7 @@ int CheckForEndOfCorridor()
       SensorsTriggered++; //Increment # of sensors triggered
     }
   }
-//  button.waitForButton();  //debug freeze for wall colliding testing
+  //  button.waitForButton();  //debug freeze for wall colliding testing
   Serial.println("Readings Complete"); //debug that reading is complete
   return SensorsTriggered; //return the number of sensors that have been triggered
 }
@@ -199,16 +203,63 @@ void EndOfCorridor()
 {
   Serial.println("End of Corridor encountered! Stopping movement");   //inform user the end of the corridor has been reached
   motors.setSpeeds(-MAX_SPEED, -MAX_SPEED); //reverse to move off the wall
-  delay(25); //for 150ms
+  delay(20); //for 20ms
   Halt(); //Stop all movement
 }
 
-void RoomExplore(char direction)  
+void RoomExplore(char direction)
 {
-  Serial.println("Room Exploring started");
+  float RoomLength;
+  
+  Serial.print("Room Exploring started. Entering room # ");
+  Serial.print(RoomNumber);
+  Serial.print( "On the ");
+  if (direction == 'l')
+  {
+    Serial.println("left.");
+  }
+  else if (direction == 'r')
+  {
+    Serial.println("right.");
+  }
+  
   TurnZumo(direction, 90);
-  delay(200); //delay to allow US sensor to work
-  Serial.print(sonar.ping_cm());
+  RoomLength = millis();
+  motors.setSpeeds(MAX_SPEED, MAX_SPEED);
+  sensors.read(sensor_values);
+  int loopNumber =0;
+  while (sensor_values[5] < SensorLightThresholds[5] &&  sensor_values[0] < SensorLightThresholds[0])
+  {
+    ++loopNumber;
+    Serial.print("Loop Number ");
+    Serial.println(loopNumber);
+    sensors.read(sensor_values);
+  }
+  RoomLength = millis() - RoomLength;
+  motors.setSpeeds(-MAX_SPEED, -MAX_SPEED);
+  delay(RoomLength/2);
+  motors.setSpeeds(0, 0);
+  delay(50);
+  int Pings [USSamples];
+  int NumOfObjectsDetected =0;
+  for (int i = 0; i < USSamples; i++)
+  {
+    TurnZumo('r', 30);
+    Serial.print("Ping: ");
+    Serial.print(sonar.ping_cm()); // Send ping, get distance in cm and print result (0 = outside set distance range)
+    Serial.println("cm");
+    Pings[i] = sonar.ping_cm();
+//
+    if (Pings[i] <ObjectDetectionRange && Pings[i] !=0 )
+    {
+      NumOfObjectsDetected++;
+    }
+  }
+  Serial.print(NumOfObjectsDetected);
+  Serial.print(" Object/s detected within room #");
+  Serial.println(RoomNumber);
+  ++ RoomNumber;
+
 }
 
 void CalibrateCompass()
@@ -237,8 +288,8 @@ void CalibrateCompass()
 
     delay(50);
   }
-    motors.setSpeeds(-TurnSpeed,TurnSpeed);
-    for (index = 0; index < CALIBRATION_SAMPLES; index ++)
+  motors.setSpeeds(-TurnSpeed, TurnSpeed);
+  for (index = 0; index < CALIBRATION_SAMPLES; index ++)
   {
     // Take a reading of the magnetic vector and store it in compass.m
     compass.read();
@@ -282,8 +333,8 @@ void TurnZumo(char turnDirection, int magnitude)
   int speed;
   int directionFactor;
   static float target_heading = averageHeading();
-  Serial.print("Turning Magnitude");
-  Serial.println(magnitude);
+  //Serial.printu("Turning Magnitude");
+  //Serial.println(magnitude);
   if (magnitude == 0)
   {
     magnitude = 90; //if no magnitude is set. Set magnitude to 90
@@ -293,12 +344,10 @@ void TurnZumo(char turnDirection, int magnitude)
   if (turnDirection == 'r')
   {
     target_heading = fmod(averageHeading() + magnitude, 360); //heading of target
-    directionFactor = 1;
   }
   else if (turnDirection == 'l')
   {
     target_heading = fmod(averageHeading() - magnitude, 360); //heading of target
-    directionFactor = -1;
   }
   relative_heading = relativeHeading(heading, target_heading);
   //  Serial.print("Relative Heading =");
@@ -384,8 +433,8 @@ float averageHeading() //function from compass example
 void CalibrateLightSensors()
 {
   delay(300);  //delay so pressing on button doesnt interfere with sensor readings
-  unsigned int SensorLightTotal[NUM_SENSORS]= {0,0,0,0,0,0};
-  
+  unsigned int SensorLightTotal[NUM_SENSORS] = {0, 0, 0, 0, 0, 0};
+
   for ( int j = 0; j < 10; j++)
   {
     delay(200);
@@ -395,11 +444,11 @@ void CalibrateLightSensors()
       SensorLightTotal[i] += SensorLightThresholds[i];
     }
   }
-  for (int k =0; k<NUM_SENSORS; k++)
+  for (int k = 0; k < NUM_SENSORS; k++)
   {
-    SensorLightThresholds[k] = SensorLightTotal[k]/10*0.95;
-    SensorLightThresholds[k]=300;
+    SensorLightThresholds[k] = SensorLightTotal[k] / 10 * 0.95;
+    SensorLightThresholds[k] = 300;
   }
-  
+
 }
 
