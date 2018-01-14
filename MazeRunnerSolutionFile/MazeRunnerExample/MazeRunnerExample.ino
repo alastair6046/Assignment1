@@ -45,16 +45,16 @@ const int MAX_SPEED = 200;  //max speed of robot
 int LeftMotSpeed = 0; //left motor speed
 int RightMotSpeed = 0; //right motor speed
 bool MoveZumo = false; //true when Zumo is moving
-float InstructionEnd = 0;
-bool ZumoMoving = false;
-int NumFrontSensorsTrigged = 0;
-int RoomNumber = 1;
+float InstructionEnd = 0; //Time in ms for when current instructions should end.  Only used in debugging
+bool ZumoMoving = false; //Is the Zumo moving
+int NumFrontSensorsTrigged = 0; //How many light sensors have triggered
+int RoomNumber = 1; //the Number for the current room
 //int LightAdjustments[]= {0,-100,-100,-100,-100,0};
-bool ObjectIdentified;
+
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(9600);
+  Serial.begin(9600); //open serial port
   Serial.println("Please Press Button on Zumo to begin setup");  //Ask user to press button on zumo to begin
   button.waitForButton(); //waiting for button press
   Serial.println("Please move the front of the zuomo on top of the wall then press the button again"); //ask user to move the light sensors of the zumo over a piece of wall
@@ -105,22 +105,22 @@ void loop() {
       break;
     case 'q': case 'Q': //room on left
       Serial.println("Room on left registered");
-      RoomExplore('l');
+      RoomExplore('l'); //Explore room on left
       break;
     case 'e': case 'E': //room on right
       Serial.println("Room on right registered");
-      RoomExplore('r');
+      RoomExplore('r'); /Explore room on right
       break;
 
 
   }
   //Check US sensor for collissions
-  if (sonar.ping_cm() < ObjectDetectionRange&& sonar.ping_cm()!=0)
+  if (sonar.ping_cm() < ObjectDetectionRange&& sonar.ping_cm()!=0) //if Object is detected in front of Zumo HALT
   {
     //Serial.print(sonar.ping_cm());
     Halt();
     Serial.println(" Object Detected in front of robot."); 
-    motors.setSpeeds(-MAX_SPEED, -MAX_SPEED); //move away from object
+    motors.setSpeeds(-MAX_SPEED, -MAX_SPEED); //move away from object //Back away from object
     delay(100);
     motors.setSpeeds(0,0);
   }
@@ -185,9 +185,9 @@ void loop() {
 
 void Halt()
 {
-  motors.setSpeeds(0,0);
-  LeftMotSpeed = 0; //stop left motor
-  RightMotSpeed = 0; //stop right motor
+  motors.setSpeeds(0,0); //stop motors
+  LeftMotSpeed = 0; //stop left motor variable
+  RightMotSpeed = 0; //stop right motor variable
   MoveZumo = false; //zumo no longer moving
   Serial.println("Robot Stopped"); //tell user Zumo has stopped
   delay(300); //wait 300ms
@@ -223,7 +223,7 @@ void RoomExplore(char direction)
 {
   float RoomLength;
   
-  Serial.print("Room Exploring started. Entering room # ");
+  Serial.print("Room Exploring started. Entering room # "); //Inform user about room exploring
   Serial.print(RoomNumber);
   Serial.print( "On the ");
   if (direction == 'l')
@@ -235,31 +235,31 @@ void RoomExplore(char direction)
     Serial.println("right.");
   }
   
-  TurnZumo(direction, 90);
-  RoomLength = millis();
-  motors.setSpeeds(MAX_SPEED, MAX_SPEED);
-  sensors.read(sensor_values);
-  int loopNumber =0;
-  while (sensor_values[5] < SensorLightThresholds[5] &&  sensor_values[0] < SensorLightThresholds[0])
+  TurnZumo(direction, 90); //Turn into room
+  RoomLength = millis(); //Capture time frame
+  motors.setSpeeds(MAX_SPEED, MAX_SPEED); //full speed ahead
+  sensors.read(sensor_values); //take sensor reading
+  int loopNumber =0; //debug variable
+  while (sensor_values[5] < SensorLightThresholds[5] &&  sensor_values[0] < SensorLightThresholds[0]) //keep going forwards until zumo hits a wall
   {
     ++loopNumber;
     //Serial.print("Loop Number ");
     //Serial.println(loopNumber);
     sensors.read(sensor_values);
   }
-  RoomLength = millis() - RoomLength;
-  motors.setSpeeds(-MAX_SPEED, -MAX_SPEED);
-  delay(RoomLength/2);
-  motors.setSpeeds(0, 0);
+  RoomLength = millis() - RoomLength; //calculate duration going forwards
+  motors.setSpeeds(-MAX_SPEED, -MAX_SPEED); //reverse
+  delay(RoomLength/2); //reverse for half the time that zumo went forwards to end up in middle of room
+  motors.setSpeeds(0, 0); //freeze
   delay(50);
-  int Pings [USSamples];
+  int Pings [USSamples]; //begin object detection routine
   int NumOfObjectsDetected =0;
   for (int i = 0; i < USSamples; i++)
   {
     TurnZumo('r', 30);
-    Serial.print("Ping: ");
-    Serial.print(sonar.ping_cm()); // Send ping, get distance in cm and print result (0 = outside set distance range)
-    Serial.println("cm");
+    //Serial.print("Ping: ");
+    //Serial.print(sonar.ping_cm()); // Send ping, get distance in cm and print result (0 = outside set distance range)
+    //Serial.println("cm");
     Pings[i] = sonar.ping_cm();
 //
     if (Pings[i] <ObjectDetectionRange && Pings[i] !=0 )
@@ -274,6 +274,7 @@ void RoomExplore(char direction)
 
 }
 
+//Function from Zumo Compass example
 void CalibrateCompass()
 {
   LSM303::vector<int16_t> running_min = {32767, 32767, 32767}, running_max = { -32767, -32767, -32767};
@@ -336,7 +337,7 @@ void CalibrateCompass()
   compass.m_min.x = running_min.x;
   compass.m_min.y = running_min.y;
 }
-
+//Some function content from Zumo Compass example
 void TurnZumo(char turnDirection, int magnitude)
 {
   motors.setSpeeds(0, 0);
@@ -396,7 +397,7 @@ void TurnZumo(char turnDirection, int magnitude)
     // Serial.print("Turning");
   }
 }
-
+//Function from Zumo Compass example
 template <typename T> float heading(LSM303::vector<T> v) //function from compass example
 {
   float x_scaled =  2.0 * (float)(v.x - compass.m_min.x) / ( compass.m_max.x - compass.m_min.x) - 1.0;
@@ -407,7 +408,7 @@ template <typename T> float heading(LSM303::vector<T> v) //function from compass
     angle += 360;
   return angle;
 }
-
+//Function from Zumo Compass example
 // Yields the angle difference in degrees between two headings
 float relativeHeading(float heading_from, float heading_to) //function from compass example
 {
@@ -421,9 +422,9 @@ float relativeHeading(float heading_from, float heading_to) //function from comp
 
   return relative_heading;
 }
-
+//Function from Zumo Compass example
 // Average 10 vectors to get a better measurement and help smooth out
-// the motors' magnetic interference.
+// the motors' magnetic interference. 
 float averageHeading() //function from compass example
 {
   LSM303::vector<int32_t> avg = {0, 0, 0};
