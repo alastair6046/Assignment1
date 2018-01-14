@@ -24,7 +24,7 @@
 #define MaxDistance 200
 #define NUM_SENSORS 6  // theres 6 sensors on the robot
 
-#define ObjectDetectionRange 30
+#define ObjectDetectionRange 15
 #define USSamples 15
 
 NewPing sonar(TriggerPin, EchoPin, MaxDistance); //set up the UltraSonic sensor
@@ -50,7 +50,7 @@ bool ZumoMoving = false;
 int NumFrontSensorsTrigged = 0;
 int RoomNumber = 1;
 //int LightAdjustments[]= {0,-100,-100,-100,-100,0};
-
+bool ObjectIdentified;
 
 void setup() {
   // put your setup code here, to run once:
@@ -59,6 +59,7 @@ void setup() {
   button.waitForButton(); //waiting for button press
   Serial.println("Please move the front of the zuomo on top of the wall then press the button again"); //ask user to move the light sensors of the zumo over a piece of wall
   button.waitForButton();
+  Serial.println("Button Press Acknowledged... processing");
   CalibrateLightSensors();
   Serial.print("Please Move Zumo to beginning then press button again to calibrate compass");
   button.waitForButton();
@@ -113,6 +114,16 @@ void loop() {
 
 
   }
+  //Check US sensor for collissions
+  if (sonar.ping_cm() < ObjectDetectionRange)
+  {
+    Serial.println("Object Detected in front of robot."); 
+    Halt();
+    motors.setSpeeds(-MAX_SPEED, -MAX_SPEED); //move away from object
+    delay(100);
+    motors.setSpeeds(0,0);
+  }
+  
   sensors.read(sensor_values); //every loop take a new sensor reading
   if (InstructionEnd < millis() && MoveZumo == true) //if the Instruction end is less than the duration that Zumo has been running for halt.
   {
@@ -179,7 +190,7 @@ void Halt()
   MoveZumo = false; //zumo no longer moving
   Serial.println("Robot Stopped"); //tell user Zumo has stopped
   delay(300); //wait 300ms
-  Serial.println("Please provide new instruction"); //ask for a new instruction
+  //Serial.println("Please provide new instruction"); //ask for a new instruction
 }
 
 int CheckForEndOfCorridor()
@@ -203,7 +214,7 @@ void EndOfCorridor()
 {
   Serial.println("End of Corridor encountered! Stopping movement");   //inform user the end of the corridor has been reached
   motors.setSpeeds(-MAX_SPEED, -MAX_SPEED); //reverse to move off the wall
-  delay(20); //for 20ms
+  delay(100); //for 100ms
   Halt(); //Stop all movement
 }
 
