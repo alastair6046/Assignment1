@@ -115,17 +115,17 @@ void loop() {
 
   }
   //Check US sensor for collissions
-  if (sonar.ping_cm() < ObjectDetectionRange && sonar.ping_cm()!=0)
+  if (sonar.ping_cm() < ObjectDetectionRange&& sonar.ping_cm()!=0)
   {
-    Serial.print(sonar.ping_cm());
-    Serial.println(" Object Detected in front of robot."); 
+    //Serial.print(sonar.ping_cm());
     Halt();
+    Serial.println(" Object Detected in front of robot."); 
     motors.setSpeeds(-MAX_SPEED, -MAX_SPEED); //move away from object
     delay(100);
     motors.setSpeeds(0,0);
   }
   
-  sensors.read(sensor_values); //every loop take a new sensor reading
+  sensors.read(sensor_values); //every loop take a new sensor readingw
   if (InstructionEnd < millis() && MoveZumo == true) //if the Instruction end is less than the duration that Zumo has been running for halt.
   {
     Halt();
