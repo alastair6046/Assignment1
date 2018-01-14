@@ -25,7 +25,7 @@
 #define NUM_SENSORS 6  // theres 6 sensors on the robot
 
 #define ObjectDetectionRange 15
-#define USSamples 15
+#define USSamples 13
 
 NewPing sonar(TriggerPin, EchoPin, MaxDistance); //set up the UltraSonic sensor
 ZumoBuzzer buzzer;
@@ -61,7 +61,7 @@ void setup() {
   button.waitForButton();
   Serial.println("Button Press Acknowledged... processing");
   CalibrateLightSensors();
-  Serial.print("Please Move Zumo to beginning then press button again to calibrate compass");
+  Serial.println("Please Move Zumo to beginning then press button again to calibrate compass");
   button.waitForButton();
   Serial.println("Calibrating Compass");
   CalibrateCompass();
@@ -115,9 +115,10 @@ void loop() {
 
   }
   //Check US sensor for collissions
-  if (sonar.ping_cm() < ObjectDetectionRange)
+  if (sonar.ping_cm() < ObjectDetectionRange && sonar.ping_cm()!=0)
   {
-    Serial.println("Object Detected in front of robot."); 
+    Serial.print(sonar.ping_cm());
+    Serial.println(" Object Detected in front of robot."); 
     Halt();
     motors.setSpeeds(-MAX_SPEED, -MAX_SPEED); //move away from object
     delay(100);
@@ -199,14 +200,14 @@ int CheckForEndOfCorridor()
   int SensorsTriggered = 0; //Number of Sensors triggered
   for (int s = 0; s < NUM_SENSORS; s++) //for each sensor
   {
-    Serial.println(sensor_values[s]); //debug the value of the sensor
+    //Serial.println(sensor_values[s]); //debug the value of the sensor
     if (sensor_values[s] > SensorLightThresholds[s]) //if sensor is above the Light Threshold
     {
       SensorsTriggered++; //Increment # of sensors triggered
     }
   }
   //  button.waitForButton();  //debug freeze for wall colliding testing
-  Serial.println("Readings Complete"); //debug that reading is complete
+ // Serial.println("Readings Complete"); //debug that reading is complete
   return SensorsTriggered; //return the number of sensors that have been triggered
 }
 
@@ -242,8 +243,8 @@ void RoomExplore(char direction)
   while (sensor_values[5] < SensorLightThresholds[5] &&  sensor_values[0] < SensorLightThresholds[0])
   {
     ++loopNumber;
-    Serial.print("Loop Number ");
-    Serial.println(loopNumber);
+    //Serial.print("Loop Number ");
+    //Serial.println(loopNumber);
     sensors.read(sensor_values);
   }
   RoomLength = millis() - RoomLength;
@@ -295,7 +296,7 @@ void CalibrateCompass()
     running_max.x = max(running_max.x, compass.m.x);
     running_max.y = max(running_max.y, compass.m.y);
 
-    Serial.println(index);
+    //Serial.println(index);
 
     delay(50);
   }
@@ -311,7 +312,7 @@ void CalibrateCompass()
     running_max.x = max(running_max.x, compass.m.x);
     running_max.y = max(running_max.y, compass.m.y);
 
-    Serial.println(index);
+   // Serial.println(index);
 
     delay(50);
   }
